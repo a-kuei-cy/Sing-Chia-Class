@@ -1,0 +1,3 @@
+account,name,password,role,enabled
+teacher01,王老師,12345678,teacher,TRUE
+teacher02,陳老師,12345678,teacher,TRUE
