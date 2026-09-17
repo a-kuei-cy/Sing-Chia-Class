@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sing Chia Class｜興嘉課堂即時互動系統</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand"><h1>Sing Chia Class</h1><p>興嘉課堂即時互動系統 V1.1 School</p></div>
+    <div class="mode-switch">
+      <button class="btn ghost" id="homeBtn">首頁</button>
+      <button class="btn" id="teacherBtn">教師端</button>
+      <button class="btn primary" id="studentBtn">學生加入</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="homeView" class="grid two">
+      <div class="card hero">
+        <span class="pill">免 Google OAuth・校內帳密登入</span>
+        <h2>一掃就加入，<br>一答就看懂。</h2>
+        <p>教師以校內帳號登入；學生輸入 PIN 或掃 QR Code 即可加入。支援即時答題、學習診斷、排行榜與結果匯出。</p>
+        <div class="actions"><button class="btn primary big" onclick="showView('student')">輸入 PIN 加入</button><button class="btn ghost big" onclick="showView('teacher')">我是教師</button></div>
+      </div>
+      <div class="card">
+        <h3>V1.1 School</h3>
+        <div class="grid two"><div class="item">管理者匯入教師帳密</div><div class="item">密碼雜湊儲存</div><div class="item">6 位數 PIN</div><div class="item">QR Code 快速加入</div><div class="item">單選／多選／是非</div><div class="item">CSV 結果匯出</div></div>
+        <p class="muted">不需要 Google Cloud Console、不需要 OAuth Client ID。</p>
+      </div>
+    </section>
+
+    <section id="teacherView" class="hidden">
+      <div id="teacherLogin" class="card login-card">
+        <div class="section-title"><h2>教師／管理者登入</h2><span class="pill">校內帳密</span></div>
+        <div class="field"><label>帳號</label><input id="loginAccount" autocomplete="username" placeholder="例如 teacher01"></div>
+        <div class="field"><label>密碼</label><input id="loginPassword" type="password" autocomplete="current-password" placeholder="請輸入密碼"></div>
+        <label class="checkline"><input type="checkbox" id="rememberAccount"> 記住帳號</label>
+        <button class="btn primary big full" id="loginBtn">登入</button>
+        <div id="loginConfigHint" class="notice hidden">請先在 <code>config.js</code> 填入 GAS_URL。</div>
+      </div>
+
+      <div id="teacherShell" class="hidden">
+        <div class="card toolbar">
+          <div><b id="teacherName"></b><span id="teacherRole" class="pill"></span></div>
+          <div class="actions"><button id="adminTabBtn" class="btn ghost hidden">帳號管理</button><button id="quizTabBtn" class="btn">題庫與活動</button><button id="logoutBtn" class="btn danger">登出</button></div>
+        </div>
+
+        <div id="quizArea" class="grid two" style="margin-top:16px">
+          <div class="card">
+            <div class="section-title"><h2>我的題庫</h2><button class="btn primary" id="newQuizBtn">＋ 新增題庫</button></div>
+            <div id="quizList" class="quiz-list"></div>
+          </div>
+          <div class="card">
+            <div class="section-title"><h2>活動控制</h2><span class="pill">即時互動</span></div>
+            <div id="noSession"><p class="muted">從左側選擇題庫並按「開始」。</p></div>
+            <div id="sessionControl" class="hidden session-stage">
+              <div class="muted">活動 PIN</div><div id="teacherPin" class="pin">------</div><div id="teacherQr" class="qrbox"></div><div id="joinUrlText" class="muted"></div>
+              <div class="scoreline"><div class="stat">已加入 <span id="joinedCount">0</span></div><div class="stat">已作答 <span id="answeredCount">0</span></div><div class="stat">第 <span id="qNo">0</span>/<span id="qTotal">0</span> 題</div></div>
+              <div class="progress"><span id="teacherProgress"></span></div>
+              <div id="teacherQuestion" class="question-title"></div><div id="answerStats"></div>
+              <div class="actions center"><button class="btn dark" id="nextQuestionBtn">下一題</button><button class="btn ghost" id="refreshSessionBtn">更新</button><button class="btn danger" id="endSessionBtn">結束活動</button></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="quizEditor" class="card hidden" style="margin-top:16px">
+          <div class="section-title"><h2>題庫編輯</h2><button class="btn ghost" id="closeEditorBtn">關閉</button></div>
+          <div class="grid two"><div class="field"><label>題庫名稱</label><input id="quizTitle"></div><div class="field"><label>活動模式</label><select id="quizMode"><option value="competition">競賽模式</option><option value="diagnostic">學習診斷模式</option></select></div></div>
+          <div id="questionEditors"></div>
+          <div class="actions"><button class="btn" id="addQuestionBtn">＋ 新增題目</button><button class="btn primary" id="saveQuizBtn">儲存題庫</button></div>
+        </div>
+
+        <div id="resultsCard" class="card hidden" style="margin-top:16px"><div class="section-title"><h2>活動結果</h2><button class="btn primary" id="exportCsvBtn">匯出 CSV</button></div><div id="resultsTable"></div></div>
+
+        <div id="adminArea" class="hidden" style="margin-top:16px">
+          <div class="grid two">
+            <div class="card">
+              <div class="section-title"><h2>匯入教師帳號</h2><span class="pill">僅管理者</span></div>
+              <p class="muted">CSV 欄位：account,name,password,role,enabled</p>
+              <input type="file" id="teacherCsvFile" accept=".csv,text/csv">
+              <textarea id="teacherCsvText" rows="10" placeholder="account,name,password,role,enabled\nteacher01,王老師,123456,teacher,TRUE"></textarea>
+              <button class="btn primary full" id="importTeachersBtn">匯入／更新帳號</button>
+              <div id="importSummary" class="notice hidden"></div>
+            </div>
+            <div class="card">
+              <div class="section-title"><h2>新增單一帳號</h2></div>
+              <div class="field"><label>帳號</label><input id="newAccount"></div>
+              <div class="field"><label>姓名</label><input id="newName"></div>
+              <div class="field"><label>初始密碼</label><input id="newPassword" type="password"></div>
+              <div class="grid two"><div class="field"><label>角色</label><select id="newRole"><option value="teacher">教師</option><option value="admin">管理者</option></select></div><div class="field"><label>啟用</label><select id="newEnabled"><option value="true">啟用</option><option value="false">停用</option></select></div></div>
+              <button class="btn primary full" id="addTeacherBtn">新增／更新</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:16px">
+            <div class="section-title"><h2>教師帳號管理</h2><button class="btn ghost" id="refreshTeachersBtn">更新</button></div>
+            <div id="teacherTable"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="studentView" class="hidden">
+      <div id="joinCard" class="card student-card">
+        <div class="section-title"><h2>加入活動</h2><span class="pill">學生免登入</span></div>
+        <div class="field"><label>活動 PIN</label><input id="joinPin" inputmode="numeric" maxlength="6" placeholder="例如：428615" class="pin-input"></div>
+        <div class="grid three"><div class="field"><label>班級</label><input id="studentClass" placeholder="例如 501"></div><div class="field"><label>座號</label><input id="studentNo" inputmode="numeric" placeholder="12"></div><div class="field"><label>姓名</label><input id="studentName" placeholder="王小明"></div></div>
+        <button class="btn primary big full" id="joinBtn">加入活動</button>
+      </div>
+      <div id="waitingCard" class="card hidden session-stage student-card"><span class="pill">已加入</span><h2>等待老師開始下一題</h2><div class="pin" id="studentPin">------</div><p id="waitingText" class="muted"></p></div>
+      <div id="playCard" class="card hidden student-card wide"><div class="section-title"><span id="studentProgressText" class="pill"></span><span id="studentScore" class="pill">0 分</span></div><div id="studentQuestion" class="question-title"></div><div id="studentAnswers" class="answers"></div><div class="actions center"><button id="submitAnswerBtn" class="btn primary big">送出答案</button></div><div id="answerFeedback" class="notice hidden"></div></div>
+      <div id="finishCard" class="card hidden session-stage student-card"><h2>活動完成 🎉</h2><div id="finalScore" class="pin score-pin"></div><div id="studentRank"></div><button class="btn primary" onclick="location.href=location.pathname">回首頁</button></div>
+    </section>
+  </main>
+  <div class="footer">Sing Chia Class V1.1 School｜嘉義市興嘉國民小學</div>
+</div>
+<div id="toast" class="toast hidden"></div>
+<script src="config.js"></script><script src="app.js"></script>
+</body>
+</html>
